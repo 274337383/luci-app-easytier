@@ -39,7 +39,9 @@ endef
 
 define Package/$(PKG_NAME)/postinst
 #!/bin/sh
-chmod +x /etc/init.d/easytier
+[ -n "$${IPKG_INSTROOT}" ] && exit 0
+
+chmod +x /etc/init.d/easytier 2>/dev/null
 if [ -f /tmp/easytier_backup ] ; then
   echo "发现luci备份配置文件/tmp/easytier_backup，开始恢复到/etc/config/easytier"
   rm -rf /etc/config/easytier

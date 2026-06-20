@@ -7,7 +7,6 @@ uci -q batch <<-EOF >/dev/null
 	commit ucitrack
 EOF
 
-chmod +x /etc/init.d/easytier
-/etc/init.d/easytier enable
+[ -x /etc/init.d/easytier ] && /etc/init.d/easytier enable
 rm -rf /tmp/luci-indexcache /tmp/luci-modulecache
 exit 0
