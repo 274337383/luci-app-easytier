@@ -401,8 +401,8 @@ local translate = i18n.translate
 	<div class="upload-card" id="upload_area">
 		<div class="upload-icon">📦</div>
 		<div class="upload-title"><%=translate("Upload EasyTier Binary")%></div>
-		<div class="upload-desc"><%=translate("Drag *.tar.gz / *.zip / easytier binaries here or click to select file")%></div>
-		<input type="file" id="file_input" style="display:none" accept="*">
+		<div class="upload-desc"><%=translate("Drag an EasyTier binary here or click to select file")%></div>
+		<input type="file" id="file_input" style="display:none">
 		<button class="upload-btn" onclick="event.stopPropagation(); document.getElementById('file_input').click();">
 			<%=translate("Select File")%>
 		</button>
@@ -464,7 +464,7 @@ local translate = i18n.translate
 			<li><strong>easytier-cli</strong> - <%=translate("Command line tool")%></li>
 			<li><strong>easytier-web-embed</strong> - <%=translate("Embedded web console")%> <span style="color:var(--success);">(<%=translate("Recommended")%>)</span></li>
 			<li><strong>easytier-web</strong> - <%=translate("Web console binary")%> <span style="color:var(--error);">(<%=translate("Will be ignored, use embed version instead")%>)</span></li>
-			<li><strong>*.zip / *.tar.gz</strong> - <%=translate("Compressed archive containing binaries")%></li>
+			<li><%=translate("Compressed archives are not accepted; upload one expected binary at a time")%></li>
 		</ul>
 		<div style="margin-top:12px;padding:12px;background:rgba(33,150,243,0.1);border-left:3px solid var(--info);border-radius:4px;">
 			<div style="font-size:12px;color:var(--text-primary);margin-bottom:4px;">
@@ -791,9 +791,6 @@ function checkDiskSpace(inputId) {
 		return;
 	}
 	
-	var dir = path.match(/^(.*)\/[^\/]+$/);
-	dir = dir ? dir[1] : '/tmp';
-	
 	var xhr = new XMLHttpRequest();
 	xhr.open('POST', '<%=url("admin", "vpn", "easytier", "get_disk_space")%>', true);
 	xhr.setRequestHeader('Content-Type', 'application/json');
@@ -835,7 +832,7 @@ function checkDiskSpace(inputId) {
 			}
 		}
 	};
-	xhr.send(JSON.stringify({path: dir, full_path: path, type: inputId}));
+	xhr.send(JSON.stringify({type: inputId}));
 }
 
 function getCurrentConfig() {
@@ -1000,23 +997,18 @@ function handleFile(file) {
 	var validNames = ['easytier-core', 'easytier-cli', 'easytier-web', 'easytier-web-embed'];
 	var filename = file.name;
 	
-	// 检查是否是压缩文件
-	var isArchive = filename.match(/\.(zip|tar\.gz|tgz|tar)$/i);
-	
-	// 验证文件名（压缩文件直接通过，二进制文件需要验证）
-	if (!isArchive) {
-		var isValid = false;
-		for (var i = 0; i < validNames.length; i++) {
-			if (filename === validNames[i]) {
-				isValid = true;
-				break;
-			}
+	// 只接受预期的独立二进制文件名
+	var isValid = false;
+	for (var i = 0; i < validNames.length; i++) {
+		if (filename === validNames[i]) {
+			isValid = true;
+			break;
 		}
-		
-		if (!isValid) {
-			showAlert('error', '<%=translate("Invalid file name")%>. <%=translate("Only easytier binaries or compressed archives (.zip, .tar.gz, .tar) are allowed")%>');
-			return;
-		}
+	}
+
+	if (!isValid) {
+		showAlert('error', '<%=translate("Invalid file name")%>. <%=translate("Only individual EasyTier binaries are allowed")%>');
+		return;
 	}
 	
 	uploadFile(file);

@@ -981,8 +981,6 @@ function closeResetDbModal() {
 }
 
 function confirmResetDb() {
-	var dbPath = document.getElementById('web_db_path').value || '/etc/easytier/et.db';
-	
 	var xhr = new XMLHttpRequest();
 	xhr.open('POST', '<%=url("admin", "vpn", "easytier", "reset_database")%>', true);
 	xhr.setRequestHeader('Content-Type', 'application/json');
@@ -1008,7 +1006,7 @@ function confirmResetDb() {
 		closeResetDbModal();
 		showAlert('error', '<%:Network error%>');
 	};
-	xhr.send(JSON.stringify({db_path: dbPath}));
+	xhr.send('{}');
 }
 
 function checkWebStatusForRestart(deletedFiles) {
