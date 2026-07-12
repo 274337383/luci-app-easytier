@@ -173,23 +173,13 @@ check_config() {
                    procd_open_instance
                    get_tz
 		   [ -z "$SET_TZ" ] || procd_set_param env TZ="$SET_TZ"
-		   procd_set_param command /bin/sh -c "
-			cd /tmp ; ${easytierbin} -c ${config_file} --console-log-level ${log} >> /tmp/easytier.log 2>&1 &
-			ET_CORE_PID=\$!
-			{
-			while true; do
-				LOG_SIZE=\$(ls -l /tmp/easytier.log | awk '{print int(\$5/1024)}')
-				if [ \$LOG_SIZE -gt 5120 ]; then
-					tail -n 500 /tmp/easytier.log > /tmp/easytier.log.tmp
-					mv /tmp/easytier.log.tmp /tmp/easytier.log
-				fi
-				sleep 300
-			done
-			} &
-			LOG_MANAGEMENT_PID=\$!
-			trap \"kill -TERM \$ET_CORE_PID; kill -TERM \$LOG_MANAGEMENT_PID; exit\" SIGINT SIGTERM EXIT
-			wait \$ET_CORE_PID
-		   "
+		   procd_set_param command "$easytierbin"
+		   procd_append_param command -c
+		   procd_append_param command "$config_file"
+		   procd_append_param command --console-log-level
+		   procd_append_param command "$log"
+		   procd_set_param stdout 1
+		   procd_set_param stderr 1
 		   
 }
 
@@ -447,144 +437,153 @@ start_et() {
 			procd_open_instance "easytier_core"
 			get_tz
 			[ -z "$SET_TZ" ] || procd_set_param env TZ="$SET_TZ"
-			core_cmd=""
 			if [ "$etcmd" = "etcmd" ] ; then
+				procd_set_param command "$easytierbin"
 				#默认方式启动
-				[ -z "$network_name" ] || core_cmd="${core_cmd} --network-name $(shell_quote "$network_name")"
-				[ -z "$network_secret" ] || core_cmd="${core_cmd} --network-secret $(shell_quote "$network_secret")"
-				[ -z "$ipaddr" ] || core_cmd="${core_cmd} -i $ipaddr"
-				[ -z "$ip6addr" ] || core_cmd="${core_cmd} --ipv6 $ip6addr"
-				[ "$ip_dhcp" = "0" ] || core_cmd="${core_cmd} -d"
+				if [ -n "$network_name" ] ; then
+					procd_append_param command --network-name
+					procd_append_param command "$network_name"
+				fi
+				if [ -n "$network_secret" ] ; then
+					procd_append_param command --network-secret
+					procd_append_param command "$network_secret"
+				fi
+				[ -z "$ipaddr" ] || procd_append_param command -i $ipaddr
+				[ -z "$ip6addr" ] || procd_append_param command --ipv6 $ip6addr
+				[ "$ip_dhcp" = "0" ] || procd_append_param command -d
 				if [ ! -z "$peeradd" ] ; then
                   			if [[ "$(grep "list peeradd" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]]; then
-                    				core_cmd="${core_cmd} -p $peeradd"
+                    				procd_append_param command -p $peeradd
                   			else
                     				for peeraddr in $(cat /etc/config/easytier | grep 'list peeradd'  | awk -F 'list peeradd' '{print $2}' | sed "s/'/\n/g" | tr -d " ' "); do
-                    					core_cmd="${core_cmd} -p $peeraddr"
+                    					procd_append_param command -p $peeraddr
                    				done
                    			fi
                 		fi
                 		if [ ! -z "$proxy_network" ] ; then
                   			if [[ "$(grep "list proxy_network" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]]; then
-                    				core_cmd="${core_cmd} -n $proxy_network"
+                    				procd_append_param command -n $proxy_network
                   			else
                     				for proxy_networks in $(cat /etc/config/easytier | grep 'list proxy_network'  | awk -F 'list proxy_network' '{print $2}' | sed "s/'/\n/g" | tr -d " ' "); do
-                    					core_cmd="${core_cmd} -n $proxy_networks"
+                    					procd_append_param command -n $proxy_networks
                    				done
                    			fi
                 		fi
                 		if [ ! -z "$exit_nodes" ] ; then
                   			if [[ "$(grep "list exit_nodes" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]]; then
-                    				core_cmd="${core_cmd} --exit-nodes $exit_nodes"
+                    				procd_append_param command --exit-nodes $exit_nodes
                   			else
                     				for exit_nodeadds in $(cat /etc/config/easytier | grep 'list exit_nodes'  | awk -F 'list exit_nodes' '{print $2}' | sed "s/'/\n/g" | tr -d " ' "); do
-                    					core_cmd="${core_cmd} --exit-nodes $exit_nodeadds"
+                    					procd_append_param command --exit-nodes $exit_nodeadds
                    				done
                    			fi
                 		fi
                 		if [ ! -z "$manual_routes" ] ; then
                   			if [[ "$(grep "list manual_routes" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]]; then
-                    				core_cmd="${core_cmd} --manual-routes $manual_routes"
+                    				procd_append_param command --manual-routes $manual_routes
                   			else
                     				for manual_routeadds in $(cat /etc/config/easytier | grep 'list manual_routes'  | awk -F 'list manual_routes' '{print $2}' | sed "s/'/\n/g" | tr -d " ' "); do
-                    					core_cmd="${core_cmd} --manual-routes $manual_routeadds"
+                    					procd_append_param command --manual-routes $manual_routeadds
                    				done
                    			fi
                 		fi
                 		if [ "$relay_network" = "1" ] ; then
                 			if [ ! -z "$whitelist" ] ; then
                   				if [[ "$(grep "list whitelist" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]]; then
-                    					core_cmd="${core_cmd} --relay-network-whitelist $whitelist"
+                    					procd_append_param command --relay-network-whitelist $whitelist
                   				else
                     					for whitelists in $(cat /etc/config/easytier | grep 'list whitelist'  | awk -F 'list whitelist' '{print $2}' | sed "s/'/\n/g" | tr -d " ' "); do
-                    						core_cmd="${core_cmd} --relay-network-whitelist $whitelists"
+                    						procd_append_param command --relay-network-whitelist $whitelists
                    					done
                    				fi
                    			else
-                   				core_cmd="${core_cmd} --relay-network-whitelist"
+                   				procd_append_param command --relay-network-whitelist
                 			fi
                 		fi
 				if [ ! -z "$mapped_listeners" ] ; then
                   			if [[ "$(grep "list mapped_listeners" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]]; then
-                    				core_cmd="${core_cmd} --mapped-listeners $mapped_listeners"
+                    				procd_append_param command --mapped-listeners $mapped_listeners
                   			else
                     				for mapped_listener in $(cat /etc/config/easytier | grep 'list mapped_listeners'  | awk -F 'list mapped_listeners' '{print $2}' | sed "s/'/\n/g" | tr -d " ' "); do
-                    					core_cmd="${core_cmd} --mapped-listeners $mapped_listener"
+                    					procd_append_param command --mapped-listeners $mapped_listener
                    				done
                    			fi
                 		fi
                 		if [ ! -z "$port_forward" ] ; then
                   			if [[ "$(grep "list port_forward" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]]; then
-                    				core_cmd="${core_cmd} --port-forward $port_forward"
+                    				procd_append_param command --port-forward $port_forward
                   			else
                     				for port_forwards in $(cat /etc/config/easytier | grep 'list port_forward'  | awk -F 'list port_forward' '{print $2}' | sed "s/'/\n/g" | tr -d " ' "); do
-                    					core_cmd="${core_cmd} --port-forward $port_forwards"
+                    					procd_append_param command --port-forward $port_forwards
                    				done
                    			fi
                 		fi
-				[ -z "$rpc_portal" ] || core_cmd="${core_cmd} -r $rpc_portal"
-				[ -z "$rpc_portal_whitelist" ] || core_cmd="${core_cmd} --rpc-portal-whitelist $rpc_portal_whitelist"
-				[ -z "$tcp_port" ] || core_cmd="${core_cmd} -l tcp:$tcp_port"
-				[ -z "$tcp_port" ] || core_cmd="${core_cmd} -l udp:$tcp_port"
-				[ -z "$ws_port" ] || core_cmd="${core_cmd} -l ws:$ws_port"
-				[ -z "$wss_port" ] || core_cmd="${core_cmd} -l wss:$wss_port"
-				[ -z "$wg_port" ] || core_cmd="${core_cmd} -l wg:$wg_port"
-				[ -z "$quic_port" ] || core_cmd="${core_cmd} -l quic:$quic_port"
-                		[ -z "$external_node" ] || core_cmd="${core_cmd} -e $external_node"
-				[ "$listenermode" = "ON" ] || core_cmd="${core_cmd} --no-listener"
-				[ -z "$desvice_name" ] || core_cmd="${core_cmd} --hostname $(shell_quote "$desvice_name")"
-				[ -z "$instance_name" ] || core_cmd="${core_cmd} -m $instance_name"
-				[ -z "$vpn_portal" ] || core_cmd="${core_cmd} --vpn-portal $vpn_portal"
-				[ -z "$mtu" ] || core_cmd="${core_cmd} --mtu $mtu"
-				[ "$default_protocol" = "-" ] || core_cmd="${core_cmd} --default-protocol $default_protocol"
-				[ -z "$tunname" ] || core_cmd="${core_cmd} --dev-name $tunname"
-				[ "$disable_encryption" = "0" ] || core_cmd="${core_cmd} -u"
-				[ "$multi_thread" = "0" ] || core_cmd="${core_cmd} --multi-thread"
-				[ -z "$multi_thread_count" ] || core_cmd="${core_cmd} --multi-thread-count $multi_thread_count"
-				[ "$no_tun" = "0" ] || core_cmd="${core_cmd} --no-tun"
-				[ "$smoltcp" = "0" ] || core_cmd="${core_cmd} --use-smoltcp"
-				[ "$disable_ipv6" = "0" ] || core_cmd="${core_cmd} --disable-ipv6"
-				[ "$latency_first" = "0" ] || core_cmd="${core_cmd} --latency-first"
-				[ "$exit_node" = "0" ] || core_cmd="${core_cmd} --enable-exit-node"
-              	  		[ "$disable_p2p" = "0" ] || core_cmd="${core_cmd} --disable-p2p"
-                		[ "$relay_all" = "0" ] || core_cmd="${core_cmd} --relay-all-peer-rpc"
-                		[ -z "$socks_port" ] || core_cmd="${core_cmd} --socks5 $socks_port"
-				[ "$comp" = "none" ] || core_cmd="${core_cmd} --compression $comp"
-				[ "$bind_device" = "0" ] || core_cmd="${core_cmd} --bind-device true"
-				[ "$bind_device" = "1" ] || core_cmd="${core_cmd} --bind-device false"
-				[ "$kcp_proxy" = "0" ] || core_cmd="${core_cmd} --enable-kcp-proxy"
-				[ "$kcp_input" = "0" ] || core_cmd="${core_cmd} --disable-kcp-input"
-				[ "$proxy_forward" = "0" ] || core_cmd="${core_cmd} --proxy-forward-by-system"
-				[ "$accept_dns" = "0" ] || core_cmd="${core_cmd} --accept-dns true"
-				[ "$private_mode" = "0" ] || core_cmd="${core_cmd} --private-mode true"
-				[ "$quic_proxy" = "0" ] || core_cmd="${core_cmd} --enable-quic-proxy"
-				[ "$quic_input" = "0" ] || core_cmd="${core_cmd} --disable-quic-input"
-				[ -z "$foreign_relay_bps_limit" ] || core_cmd="${core_cmd} --foreign-relay-bps-limit $foreign_relay_bps_limit"
-				if [ -n "$encryption_algorithm" ] && [ "$encryption_algorithm" != "aes-gcm" ]; then
-					core_cmd="${core_cmd} --encryption-algorithm ${encryption_algorithm}"
+				[ -z "$rpc_portal" ] || procd_append_param command -r $rpc_portal
+				[ -z "$rpc_portal_whitelist" ] || procd_append_param command --rpc-portal-whitelist $rpc_portal_whitelist
+				[ -z "$tcp_port" ] || procd_append_param command -l tcp:$tcp_port
+				[ -z "$tcp_port" ] || procd_append_param command -l udp:$tcp_port
+				[ -z "$ws_port" ] || procd_append_param command -l ws:$ws_port
+				[ -z "$wss_port" ] || procd_append_param command -l wss:$wss_port
+				[ -z "$wg_port" ] || procd_append_param command -l wg:$wg_port
+				[ -z "$quic_port" ] || procd_append_param command -l quic:$quic_port
+                		[ -z "$external_node" ] || procd_append_param command -e $external_node
+				[ "$listenermode" = "ON" ] || procd_append_param command --no-listener
+				if [ -n "$desvice_name" ] ; then
+					procd_append_param command --hostname
+					procd_append_param command "$desvice_name"
 				fi
-				[ "$p2p_only" = "0" ] || core_cmd="${core_cmd} --p2p-only"
-				[ "$disable_tcp" = "0" ] || core_cmd="${core_cmd} --disable-tcp-hole-punching"
-				[ "$disable_udp" = "0" ] || core_cmd="${core_cmd} --disable-udp-hole-punching"
-				[ "$disable_sym" = "0" ] || core_cmd="${core_cmd} --disable-sym-hole-punching"
-				[ "$disable_relay_kcp" = "0" ] || core_cmd="${core_cmd} --disable-relay-kcp true"
-				[ "$relay_kcp" = "0" ] || core_cmd="${core_cmd} --enable-relay-foreign-network-kcp true"
-				[ -z "$udp_white_port" ] || core_cmd="${core_cmd} --udp-whitelist $udp_white_port"
-				[ -z "$tcp_white_port" ] || core_cmd="${core_cmd} --tcp-whitelist $tcp_white_port"
+				[ -z "$instance_name" ] || procd_append_param command -m $instance_name
+				[ -z "$vpn_portal" ] || procd_append_param command --vpn-portal $vpn_portal
+				[ -z "$mtu" ] || procd_append_param command --mtu $mtu
+				[ "$default_protocol" = "-" ] || procd_append_param command --default-protocol $default_protocol
+				[ -z "$tunname" ] || procd_append_param command --dev-name $tunname
+				[ "$disable_encryption" = "0" ] || procd_append_param command -u
+				[ "$multi_thread" = "0" ] || procd_append_param command --multi-thread
+				[ -z "$multi_thread_count" ] || procd_append_param command --multi-thread-count $multi_thread_count
+				[ "$no_tun" = "0" ] || procd_append_param command --no-tun
+				[ "$smoltcp" = "0" ] || procd_append_param command --use-smoltcp
+				[ "$disable_ipv6" = "0" ] || procd_append_param command --disable-ipv6
+				[ "$latency_first" = "0" ] || procd_append_param command --latency-first
+				[ "$exit_node" = "0" ] || procd_append_param command --enable-exit-node
+              	  		[ "$disable_p2p" = "0" ] || procd_append_param command --disable-p2p
+                		[ "$relay_all" = "0" ] || procd_append_param command --relay-all-peer-rpc
+                		[ -z "$socks_port" ] || procd_append_param command --socks5 $socks_port
+				[ "$comp" = "none" ] || procd_append_param command --compression $comp
+				[ "$bind_device" = "0" ] || procd_append_param command --bind-device true
+				[ "$bind_device" = "1" ] || procd_append_param command --bind-device false
+				[ "$kcp_proxy" = "0" ] || procd_append_param command --enable-kcp-proxy
+				[ "$kcp_input" = "0" ] || procd_append_param command --disable-kcp-input
+				[ "$proxy_forward" = "0" ] || procd_append_param command --proxy-forward-by-system
+				[ "$accept_dns" = "0" ] || procd_append_param command --accept-dns true
+				[ "$private_mode" = "0" ] || procd_append_param command --private-mode true
+				[ "$quic_proxy" = "0" ] || procd_append_param command --enable-quic-proxy
+				[ "$quic_input" = "0" ] || procd_append_param command --disable-quic-input
+				[ -z "$foreign_relay_bps_limit" ] || procd_append_param command --foreign-relay-bps-limit $foreign_relay_bps_limit
+				if [ -n "$encryption_algorithm" ] && [ "$encryption_algorithm" != "aes-gcm" ]; then
+					procd_append_param command --encryption-algorithm ${encryption_algorithm}
+				fi
+				[ "$p2p_only" = "0" ] || procd_append_param command --p2p-only
+				[ "$disable_tcp" = "0" ] || procd_append_param command --disable-tcp-hole-punching
+				[ "$disable_udp" = "0" ] || procd_append_param command --disable-udp-hole-punching
+				[ "$disable_sym" = "0" ] || procd_append_param command --disable-sym-hole-punching
+				[ "$disable_relay_kcp" = "0" ] || procd_append_param command --disable-relay-kcp true
+				[ "$relay_kcp" = "0" ] || procd_append_param command --enable-relay-foreign-network-kcp true
+				[ -z "$udp_white_port" ] || procd_append_param command --udp-whitelist $udp_white_port
+				[ -z "$tcp_white_port" ] || procd_append_param command --tcp-whitelist $tcp_white_port
 				if [ -n "$extra_args" ] ; then
 					while IFS= read -r extra_arg; do
-						[ -n "$extra_arg" ] && core_cmd="${core_cmd} $extra_arg"
+						[ -n "$extra_arg" ] && procd_append_param command $extra_arg
 					done <<EOF
 $(sed -n "s/^[[:space:]]*list[[:space:]]\\+extra_args[[:space:]]\\+'\\(.*\\)'[[:space:]]*$/\\1/p" /etc/config/easytier)
 EOF
 				fi
-				
-				echo "$(date '+%Y-%m-%d %H:%M:%S') easytier : 运行 ${easytierbin} ${core_cmd} --console-log-level ${log}" >>/tmp/easytier.log
-				
-		
+				procd_append_param command --console-log-level
+				procd_append_param command "$log"
+				echo "$(date '+%Y-%m-%d %H:%M:%S') easytier : 以 procd argv 启动 ${easytierbin} (etcmd 模式, log=${log})" >>/tmp/easytier.log
 	     		fi
 			if [ "$etcmd" = "web" ] ; then
 				#WEB控制台启动
+				procd_set_param command "$easytierbin"
 				echo "$(date '+%Y-%m-%d %H:%M:%S') easytier : 运行 ${easytierbin} -w ${web_config}" >>/tmp/easytier.log
 				[ -f /etc/easytier/et_machine_id ] || touch /etc/easytier/et_machine_id
 				if [ ! -s /etc/easytier/et_machine_id ]; then
@@ -592,27 +591,23 @@ EOF
 					echo "$(date '+%Y-%m-%d %H:%M:%S') easytier : 生成新的 UUID 到 /etc/easytier/et_machine_id" >>/tmp/easytier.log
 				fi
 				et_uuid="$(cat /etc/easytier/et_machine_id | tr -d ' \n')"
-				[ -z "$et_uuid" ] || core_cmd="${core_cmd} --machine-id $et_uuid"
-				[ -z "$web_config" ] || core_cmd="${core_cmd} -w $web_config"
-				[ -z "$desvice_name" ] || core_cmd="${core_cmd} --hostname $(shell_quote "$desvice_name")"
-			fi
-	     		procd_set_param command /bin/sh -c "
-			cd /tmp ; ${easytierbin} ${core_cmd} --console-log-level ${log} >> /tmp/easytier.log 2>&1 &
-			ET_CORE_PID=\$!
-			{
-			while true; do
-				LOG_SIZE=\$(ls -l /tmp/easytier.log | awk '{print int(\$5/1024)}')
-				if [ \$LOG_SIZE -gt 5120 ]; then
-					tail -n 500 /tmp/easytier.log > /tmp/easytier.log.tmp
-					mv /tmp/easytier.log.tmp /tmp/easytier.log
+				if [ -n "$et_uuid" ] ; then
+					procd_append_param command --machine-id
+					procd_append_param command "$et_uuid"
 				fi
-				sleep 300
-			done
-			} &
-			LOG_MANAGEMENT_PID=\$!
-			trap \"kill -TERM \$ET_CORE_PID; kill -TERM \$LOG_MANAGEMENT_PID; exit\" SIGINT SIGTERM EXIT
-			wait \$ET_CORE_PID
-		   	"
+				if [ -n "$web_config" ] ; then
+					procd_append_param command -w
+					procd_append_param command "$web_config"
+				fi
+				if [ -n "$desvice_name" ] ; then
+					procd_append_param command --hostname
+					procd_append_param command "$desvice_name"
+				fi
+				procd_append_param command --console-log-level
+				procd_append_param command "$log"
+			fi
+	     		procd_set_param stdout 1
+	     		procd_set_param stderr 1
         	fi
 		
 		procd_set_param limits core="unlimited"
@@ -705,63 +700,50 @@ start_web() {
 	procd_open_instance "easytier_web"
 	get_tz
 	[ -z "$SET_TZ" ] || procd_set_param env TZ="$SET_TZ"
-	web_cmd=""
-	[ -z "$db_path" ] || web_cmd="${web_cmd} -d $db_path"
-	[ -z "$web_protocol" ] || web_cmd="${web_cmd} -p $web_protocol"
-	[ -z "$web_port" ] || web_cmd="${web_cmd} -c $web_port"
-	[ -z "$api_port" ] || web_cmd="${web_cmd} -a $api_port"
-	[ -z "$api_host" ] || web_cmd="${web_cmd} --api-host $api_host"
-	[ -z "$geoip_db" ] || web_cmd="${web_cmd} --geoip-db $geoip_db"
+		procd_set_param command "$webbin"
+	[ -z "$db_path" ] || procd_append_param command -d $db_path
+	[ -z "$web_protocol" ] || procd_append_param command -p $web_protocol
+	[ -z "$web_port" ] || procd_append_param command -c $web_port
+	[ -z "$api_port" ] || procd_append_param command -a $api_port
+	[ -z "$api_host" ] || procd_append_param command --api-host $api_host
+	[ -z "$geoip_db" ] || procd_append_param command --geoip-db $geoip_db
 	if [ -z "$html_port" ] ; then
-		web_cmd="${web_cmd} --no-web"
+		procd_append_param command --no-web
 	else
-		web_cmd="${web_cmd} -l $html_port"
+		procd_append_param command -l $html_port
 	fi
 	# 基础配置参数
-	[ -n "$api_addr" ] && [ "$api_addr" != "0.0.0.0" ] && web_cmd="${web_cmd} --api-server-addr $api_addr"
-	[ -n "$html_addr" ] && [ "$html_addr" != "0.0.0.0" ] && web_cmd="${web_cmd} --web-server-addr $html_addr"
-	[ "$disable_registration" = "1" ] && web_cmd="${web_cmd} --disable-registration"
-	[ "$allow_auto_create_user" = "1" ] && web_cmd="${web_cmd} --allow-auto-create-user"
+	[ -n "$api_addr" ] && [ "$api_addr" != "0.0.0.0" ] && procd_append_param command --api-server-addr $api_addr
+	[ -n "$html_addr" ] && [ "$html_addr" != "0.0.0.0" ] && procd_append_param command --web-server-addr $html_addr
+	[ "$disable_registration" = "1" ] && procd_append_param command --disable-registration
+	[ "$allow_auto_create_user" = "1" ] && procd_append_param command --allow-auto-create-user
 	# OIDC配置参数
 	if [ "$oidc_enabled" = "1" ] ; then
-		[ -z "$oidc_issuer_url" ] || web_cmd="${web_cmd} --oidc-issuer-url $oidc_issuer_url"
-		[ -z "$oidc_client_id" ] || web_cmd="${web_cmd} --oidc-client-id $oidc_client_id"
-		[ -z "$oidc_client_secret" ] || web_cmd="${web_cmd} --oidc-client-secret $oidc_client_secret"
-		[ -z "$oidc_redirect_url" ] || web_cmd="${web_cmd} --oidc-redirect-url $oidc_redirect_url"
-		[ -z "$oidc_username_claim" ] || web_cmd="${web_cmd} --oidc-username-claim $oidc_username_claim"
-		[ -z "$oidc_scopes" ] || web_cmd="${web_cmd} --oidc-scopes \"$oidc_scopes\""
-		[ -z "$oidc_frontend_base_url" ] || web_cmd="${web_cmd} --oidc-frontend-base-url $oidc_frontend_base_url"
-		[ "$oidc_disable_pkce" = "1" ] && web_cmd="${web_cmd} --oidc-disable-pkce"
+		[ -z "$oidc_issuer_url" ] || procd_append_param command --oidc-issuer-url $oidc_issuer_url
+		[ -z "$oidc_client_id" ] || procd_append_param command --oidc-client-id $oidc_client_id
+		[ -z "$oidc_client_secret" ] || procd_append_param command --oidc-client-secret $oidc_client_secret
+		[ -z "$oidc_redirect_url" ] || procd_append_param command --oidc-redirect-url $oidc_redirect_url
+		[ -z "$oidc_username_claim" ] || procd_append_param command --oidc-username-claim $oidc_username_claim
+		if [ -n "$oidc_scopes" ] ; then
+			procd_append_param command --oidc-scopes
+			procd_append_param command "$oidc_scopes"
+		fi
+		[ -z "$oidc_frontend_base_url" ] || procd_append_param command --oidc-frontend-base-url $oidc_frontend_base_url
+		[ "$oidc_disable_pkce" = "1" ] && procd_append_param command --oidc-disable-pkce
 	fi
 	
 	# Webhook配置参数
 	if [ "$webhook_enabled" = "1" ] ; then
-		[ -z "$webhook_url" ] || web_cmd="${web_cmd} --webhook-url $webhook_url"
-		[ -z "$webhook_secret" ] || web_cmd="${web_cmd} --webhook-secret $webhook_secret"
-		[ -z "$internal_auth_token" ] || web_cmd="${web_cmd} --internal-auth-token $internal_auth_token"
-		[ -z "$web_instance_id" ] || web_cmd="${web_cmd} --web-instance-id $web_instance_id"
-		[ -z "$web_instance_api_base_url" ] || web_cmd="${web_cmd} --web-instance-api-base-url $web_instance_api_base_url"
+		[ -z "$webhook_url" ] || procd_append_param command --webhook-url $webhook_url
+		[ -z "$webhook_secret" ] || procd_append_param command --webhook-secret $webhook_secret
+		[ -z "$internal_auth_token" ] || procd_append_param command --internal-auth-token $internal_auth_token
+		[ -z "$web_instance_id" ] || procd_append_param command --web-instance-id $web_instance_id
+		[ -z "$web_instance_api_base_url" ] || procd_append_param command --web-instance-api-base-url $web_instance_api_base_url
 	fi
 	if [ "$weblog" != "off" ] ; then
-		web_cmd="${web_cmd} --console-log-level $weblog"	
+		procd_append_param command --console-log-level
+		procd_append_param command "$weblog"
 	fi
-	procd_set_param command /bin/sh -c "
-		cd /tmp ; ${webbin} ${web_cmd} >> /tmp/easytierweb.log 2>&1 &
-		ET_WEB_PID=\$!
-		{
-			while true; do
-				LOG_SIZE=\$(ls -l /tmp/easytierweb.log | awk '{print int(\$5/1024)}')
-				if [ \$LOG_SIZE -gt 5120 ]; then
-					tail -n 500 /tmp/easytierweb.log > /tmp/easytierweb.log.tmp
-					mv /tmp/easytierweb.log.tmp /tmp/easytierweb.log
-				fi
-				sleep 300
-			done
-		} &
-		LOG_MANAGEMENT_PID=\$!
-		trap \"kill -TERM \$ET_WEB_PID; kill -TERM \$LOG_MANAGEMENT_PID; exit\" SIGINT SIGTERM EXIT
-		wait \$ET_WEB_PID
-	"
 	procd_set_param stdout 1
 	procd_set_param stderr 1
 	procd_set_param respawn
