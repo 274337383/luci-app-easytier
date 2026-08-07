@@ -427,7 +427,7 @@ start_et() {
                 		chmod +x ${path}/easytier-cli
 			fi
 		fi
-		if [ ! -f "$easytierbin" ] || [ "$(( "$easytierbin" -h 2>&1 | wc -l ))" -lt 3 ] ; then
+		if [ ! -f "$easytierbin" ] || [ "$("$easytierbin" -h 2>&1 | wc -l)" -lt 3 ] ; then
 			echo "$(date '+%Y-%m-%d %H:%M:%S') easytier : $easytierbin 不存在或程序不完整，开始在线下载..." >>/tmp/easytier.log
                 	check_bin
 		fi
