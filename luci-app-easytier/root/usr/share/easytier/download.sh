@@ -28,14 +28,14 @@ get_latest_version() {
 	local curltest=$(which curl)
 	
 	if [ -z "$curltest" ] || [ ! -s "$(which curl)" ]; then
-		tag=$(wget --no-check-certificate -T 5 -t 3 --user-agent "$user_agent" --max-redirect=0 --output-document=- \
+		tag=$(wget -T 5 -t 3 --user-agent "$user_agent" --max-redirect=0 --output-document=- \
 			https://api.github.com/repos/EasyTier/EasyTier/releases/latest 2>&1 | grep 'tag_name' | cut -d\" -f4)
-		[ -z "$tag" ] && tag=$(wget --no-check-certificate -T 5 -t 3 --user-agent "$user_agent" --quiet --output-document=- \
+		[ -z "$tag" ] && tag=$(wget -T 5 -t 3 --user-agent "$user_agent" --quiet --output-document=- \
 			https://api.github.com/repos/EasyTier/EasyTier/releases/latest 2>&1 | grep 'tag_name' | cut -d\" -f4)
 	else
-		tag=$(curl -k --connect-timeout 3 --user-agent "$user_agent" \
+		tag=$(curl --connect-timeout 3 --user-agent "$user_agent" \
 			https://api.github.com/repos/EasyTier/EasyTier/releases/latest 2>&1 | grep 'tag_name' | cut -d\" -f4)
-		[ -z "$tag" ] && tag=$(curl -Lk --connect-timeout 3 --user-agent "$user_agent" -s \
+		[ -z "$tag" ] && tag=$(curl -L --connect-timeout 3 --user-agent "$user_agent" -s \
 			https://api.github.com/repos/EasyTier/EasyTier/releases/latest 2>&1 | grep 'tag_name' | cut -d\" -f4)
 	fi
 	
@@ -45,6 +45,15 @@ get_latest_version() {
 		[ -z "$tag" ] && tag="v2.6.2"
 	fi
 	
+	# security: tag 必须为 semver 格式 (防注入任意 URL 路径)
+	case "$tag" in
+	    v[0-9]*.[0-9]*.[0-9]*) ;;
+	    *)
+	        log_message "WARN" "easytier" "非法版本号 [$tag], 回退默认 v2.6.2" "/tmp/easytier.log"
+	        tag="v2.6.2"
+	        ;;
+	esac
+
 	echo "$tag"
 }
 
@@ -60,12 +69,32 @@ download_binary() {
 	mkdir -p "$path"
 	
 	for proxy in $proxys; do
+		# security: 代理地址必须为 http/https (防注入任意协议/命令)
+		case "$proxy" in
+		    http://*|https://*) ;;
+		    *)
+		        log_message "WARN" "easytier" "非法代理地址 [$proxy], 跳过" "/tmp/easytier.log"
+		        continue
+		        ;;
+		esac
 		log_message "INFO" "easytier" "尝试使用代理 ${proxy} 下载" "/tmp/easytier.log"
 		
-		if curl -L -k -o /tmp/easytier.zip --connect-timeout 10 --retry 3 "${proxy}${download_url}" || \
-		   wget --no-check-certificate --timeout=10 --tries=3 -O /tmp/easytier.zip "${proxy}${download_url}"; then
+		if curl -L -o /tmp/easytier.zip --connect-timeout 10 --retry 3 "${proxy}${download_url}" || \
+		   wget --timeout=10 --tries=3 -O /tmp/easytier.zip "${proxy}${download_url}"; then
 			
+			# security: 校验 zip 完整性 + 解压后检查 ELF 与最小体积 (防错误页/损坏/恶意文件)
+			if ! unzip -t /tmp/easytier.zip >/dev/null 2>&1; then
+			    log_message "ERROR" "easytier" "zip 完整性校验失败" "/tmp/easytier.log"
+			    rm -f /tmp/easytier.zip
+			    continue
+			fi
 			unzip -j -q -o /tmp/easytier.zip -d /tmp
+			if [ ! -s /tmp/easytier-core ] || [ "$(stat -c %s /tmp/easytier-core 2>/dev/null)" -lt 1048576 ] || \
+			   ! (head -c 4 /tmp/easytier-core | grep -q $'\x7fELF'); then
+			    log_message "ERROR" "easytier" "easytier-core 非有效 ELF 二进制或体积异常, 丢弃" "/tmp/easytier.log"
+			    rm -f /tmp/easytier.zip /tmp/easytier-core /tmp/easytier-cli /tmp/easytier-web /tmp/easytier-web-embed
+			    continue
+			fi
 			chmod +x /tmp/easytier-core /tmp/easytier-cli /tmp/easytier-web /tmp/easytier-web-embed 2>/dev/null || true
 			rm -rf /tmp/easytier.zip
 			

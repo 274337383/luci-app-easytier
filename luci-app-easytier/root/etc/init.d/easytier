@@ -29,7 +29,7 @@ while true; do
             if [ ! -z "$(uci -q get easytier.@easytier[0].checkip)" ]; then
                 online=""
                 for ip in $(uci -q get easytier.@easytier[0].checkip); do
-                    ms=`echo $(/bin/ping -4 $ip -c 2 -w 4 -q) | awk -F '/' '{print $4}'`
+                    ms=`echo $(/bin/ping -4 "$ip" -c 2 -w 4 -q) | awk -F '/' '{print $4}'`
                     [ ! -z "$ms" ] && echo "$(date '+%Y-%m-%d %H:%M:%S') easytier : 通断检测：${ip} 延迟：${ms}ms " >>/tmp/easytier.log && online=1
                     [ -z "$ms" ] && echo "$(date '+%Y-%m-%d %H:%M:%S') easytier : 通断检测：${ip} 网络中断 " >>/tmp/easytier.log
                 done
@@ -167,7 +167,7 @@ check_config() {
                    wireguard_port=$(cat $config_file | grep "wireguard_listen = " | awk -F ":" '{print $2}'| tr -d '/", ')
                    log="$(uci -q get easytier.@easytier[0].log || echo off)"
                    echo "$(date '+%Y-%m-%d %H:%M:%S') easytier : 检测配置文件可用性 ${easytierbin} --check-config --config-file ${config_file}" >>/tmp/easytier.log
-                   ${easytierbin} --check-config --config-file ${config_file} >> /tmp/easytier.log 2>&1 &
+                   "${easytierbin}" --check-config --config-file "${config_file}" >> /tmp/easytier.log 2>&1 &
                    
 		   echo "$(date '+%Y-%m-%d %H:%M:%S') easytier : 开始运行 ${easytierbin} -c ${config_file}" >>/tmp/easytier.log
                    procd_open_instance
@@ -403,6 +403,15 @@ set_firewall() {
 start_et() {
                 easytierbin="$(uci -q get easytier.@easytier[0].easytierbin)"
 		[ -z "$easytierbin" ] && easytierbin="/usr/bin/easytier-core" && uci -q set easytier.@easytier[0].easytierbin=/usr/bin/easytier-core
+		# security: 仅允许白名单路径 (防止 UCI 被写入任意路径并以 root 执行)
+		case "$easytierbin" in
+		    /usr/bin/easytier-core|/tmp/easytier-core) ;;
+		    *)
+		        echo "$(date '+%Y-%m-%d %H:%M:%S') easytier : 非法程序路径 [$easytierbin], 已回退默认" >>/tmp/easytier.log
+		        easytierbin="/usr/bin/easytier-core"
+		        uci -q set easytier.@easytier[0].easytierbin=/usr/bin/easytier-core
+		        ;;
+		esac
                 etcmd="$(uci -q get easytier.@easytier[0].etcmd)"
                 echo "$(date '+%Y-%m-%d %H:%M:%S') easytier : easytier-core_${cpucore}开始启动" >>/tmp/easytier.log
                 path=$(dirname "$easytierbin")
@@ -418,12 +427,12 @@ start_et() {
                 		chmod +x ${path}/easytier-cli
 			fi
 		fi
-		if [ ! -f "$easytierbin" ] || [ "$(($($easytierbin -h 2>&1 | wc -l)))" -lt 3 ] ; then
+		if [ ! -f "$easytierbin" ] || [ "$(( "$easytierbin" -h 2>&1 | wc -l ))" -lt 3 ] ; then
 			echo "$(date '+%Y-%m-%d %H:%M:%S') easytier : $easytierbin 不存在或程序不完整，开始在线下载..." >>/tmp/easytier.log
                 	check_bin
 		fi
                 
-                ver="$($easytierbin -V | awk {'print $2'} | tr -d '~')"
+                ver="$("$easytierbin" -V | awk {'print $2'} | tr -d '~')"
                 [ ! -z "$ver" ] && echo "$(date '+%Y-%m-%d %H:%M:%S') easytier : ${easytierbin}当前版本号-${ver} " >>/tmp/easytier.log
                 pgrep -f easytier_check | xargs kill -9 >/dev/null 2>&1
 		
