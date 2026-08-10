@@ -46,13 +46,10 @@ get_latest_version() {
 	fi
 	
 	# security: tag 必须为 semver 格式 (防注入任意 URL 路径)
-	case "$tag" in
-	    v[0-9]*.[0-9]*.[0-9]*) ;;
-	    *)
-	        log_message "WARN" "easytier" "非法版本号 [$tag], 回退默认 v2.6.2" "/tmp/easytier.log"
-	        tag="v2.6.2"
-	        ;;
-	esac
+	if ! echo "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+	    log_message "WARN" "easytier" "非法版本号 [$tag], 回退默认 v2.6.2" "/tmp/easytier.log"
+	    tag="v2.6.2"
+	fi
 
 	echo "$tag"
 }
@@ -83,13 +80,18 @@ download_binary() {
 		   wget --timeout=10 --tries=3 -O /tmp/easytier.zip "${proxy}${download_url}"; then
 			
 			# security: 校验 zip 完整性 + 解压后检查 ELF 与最小体积 (防错误页/损坏/恶意文件)
+			if ! command -v unzip >/dev/null 2>&1; then
+			    log_message "ERROR" "easytier" "系统缺少 unzip, 无法解压下载的压缩包" "/tmp/easytier.log"
+			    rm -f /tmp/easytier.zip
+			    continue
+			fi
 			if ! unzip -t /tmp/easytier.zip >/dev/null 2>&1; then
 			    log_message "ERROR" "easytier" "zip 完整性校验失败" "/tmp/easytier.log"
 			    rm -f /tmp/easytier.zip
 			    continue
 			fi
 			unzip -j -q -o /tmp/easytier.zip -d /tmp
-			if [ ! -s /tmp/easytier-core ] || [ "$(stat -c %s /tmp/easytier-core 2>/dev/null)" -lt 1048576 ] || \
+			if [ ! -s /tmp/easytier-core ] || [ "$(wc -c < /tmp/easytier-core 2>/dev/null)" -lt 1048576 ] || \
 			   ! (head -c 4 /tmp/easytier-core | grep -q $'\x7fELF'); then
 			    log_message "ERROR" "easytier" "easytier-core 非有效 ELF 二进制或体积异常, 丢弃" "/tmp/easytier.log"
 			    rm -f /tmp/easytier.zip /tmp/easytier-core /tmp/easytier-cli /tmp/easytier-web /tmp/easytier-web-embed
