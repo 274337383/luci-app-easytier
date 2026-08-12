@@ -42,13 +42,13 @@ get_latest_version() {
 	# 如果获取失败，从 UCI 配置或使用默认版本
 	if [ -z "$tag" ]; then
 		tag=$(uci -q get easytier.@easytier[0].fallback_version)
-		[ -z "$tag" ] && tag="v2.6.2"
+		[ -z "$tag" ] && tag="v2.6.4"
 	fi
 	
 	# security: tag 必须为 semver 格式 (防注入任意 URL 路径)
 	if ! echo "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-	    log_message "WARN" "easytier" "非法版本号 [$tag], 回退默认 v2.6.2" "/tmp/easytier.log"
-	    tag="v2.6.2"
+	    log_message "WARN" "easytier" "非法版本号 [$tag], 回退默认 v2.6.4" "/tmp/easytier.log"
+	    tag="v2.6.4"
 	fi
 
 	echo "$tag"
