@@ -422,7 +422,7 @@ start_et() {
 				[ -z "$ip6addr" ] || procd_append_param command --ipv6 $ip6addr
 				[ "$ip_dhcp" = "0" ] || procd_append_param command -d
 				if [ ! -z "$peeradd" ] ; then
-                  			if [[ "$(grep "list peeradd" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]]; then
+					if [ "$(grep "list peeradd" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]; then
                     				procd_append_param command -p $peeradd
                   			else
                     				for peeraddr in $(cat /etc/config/easytier | grep 'list peeradd'  | awk -F 'list peeradd' '{print $2}' | sed "s/'/\n/g" | tr -d " ' "); do
@@ -431,7 +431,7 @@ start_et() {
                    			fi
                 		fi
                 		if [ ! -z "$proxy_network" ] ; then
-                  			if [[ "$(grep "list proxy_network" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]]; then
+					if [ "$(grep "list proxy_network" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]; then
                     				procd_append_param command -n "$proxy_network"
                   			else
                     				for proxy_networks in $(cat /etc/config/easytier | grep 'list proxy_network'  | awk -F 'list proxy_network' '{print $2}' | sed "s/'/\n/g" | tr -d " ' "); do
@@ -440,7 +440,7 @@ start_et() {
                    			fi
                 		fi
                 		if [ ! -z "$exit_nodes" ] ; then
-                  			if [[ "$(grep "list exit_nodes" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]]; then
+					if [ "$(grep "list exit_nodes" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]; then
                     				procd_append_param command --exit-nodes $exit_nodes
                   			else
                     				for exit_nodeadds in $(cat /etc/config/easytier | grep 'list exit_nodes'  | awk -F 'list exit_nodes' '{print $2}' | sed "s/'/\n/g" | tr -d " ' "); do
@@ -449,7 +449,7 @@ start_et() {
                    			fi
                 		fi
                 		if [ ! -z "$manual_routes" ] ; then
-                  			if [[ "$(grep "list manual_routes" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]]; then
+					if [ "$(grep "list manual_routes" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]; then
                     				procd_append_param command --manual-routes $manual_routes
                   			else
                     				for manual_routeadds in $(cat /etc/config/easytier | grep 'list manual_routes'  | awk -F 'list manual_routes' '{print $2}' | sed "s/'/\n/g" | tr -d " ' "); do
@@ -459,7 +459,7 @@ start_et() {
                 		fi
                 		if [ "$relay_network" = "1" ] ; then
                 			if [ ! -z "$whitelist" ] ; then
-                  				if [[ "$(grep "list whitelist" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]]; then
+						if [ "$(grep "list whitelist" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]; then
                     					procd_append_param command --relay-network-whitelist $whitelist
                   				else
                     					for whitelists in $(cat /etc/config/easytier | grep 'list whitelist'  | awk -F 'list whitelist' '{print $2}' | sed "s/'/\n/g" | tr -d " ' "); do
@@ -471,7 +471,7 @@ start_et() {
                 			fi
                 		fi
 				if [ ! -z "$mapped_listeners" ] ; then
-                  			if [[ "$(grep "list mapped_listeners" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]]; then
+					if [ "$(grep "list mapped_listeners" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]; then
                     				procd_append_param command --mapped-listeners $mapped_listeners
                   			else
                     				for mapped_listener in $(cat /etc/config/easytier | grep 'list mapped_listeners'  | awk -F 'list mapped_listeners' '{print $2}' | sed "s/'/\n/g" | tr -d " ' "); do
@@ -480,7 +480,7 @@ start_et() {
                    			fi
                 		fi
                 		if [ ! -z "$port_forward" ] ; then
-                  			if [[ "$(grep "list port_forward" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]]; then
+					if [ "$(grep "list port_forward" /etc/config/easytier | awk '{print $3}' | wc -l ) " -eq 1 ]; then
                     				procd_append_param command --port-forward $port_forward
                   			else
                     				for port_forwards in $(cat /etc/config/easytier | grep 'list port_forward'  | awk -F 'list port_forward' '{print $2}' | sed "s/'/\n/g" | tr -d " ' "); do

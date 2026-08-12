@@ -127,8 +127,8 @@ jobs:
           2. Install \`luci-app-easytier\`. / 再安装 \`luci-app-easytier\`。
           3. Install \`luci-i18n-easytier-zh-cn\` if you need Simplified Chinese. / 如需中文界面，再安装 \`luci-i18n-easytier-zh-cn\`。
 
-          If you need the EasyTier binaries in a custom directory, do not install \`easytier\` or \`easytier-noweb\`. Install only \`luci-app-easytier\` and the language package, then open LuCI -> VPN -> EasyTier -> Upload Program, set the program directory, save it, and upload the official EasyTier release files manually.
-          如果需要把 EasyTier 程序安装到自定义目录，不要安装 \`easytier\` 或 \`easytier-noweb\`。只安装 \`luci-app-easytier\` 和语言包，然后进入 LuCI -> VPN -> EasyTier -> 上传程序，设置程序目录并保存，再手动上传官方 EasyTier Release 中的程序文件。
+          If you need to install the EasyTier binaries manually, do not install \`easytier\` or \`easytier-noweb\`. Install only \`luci-app-easytier\` and the language package, then open LuCI -> VPN -> EasyTier -> Upload Program, save it, and upload the official EasyTier release files manually. Note: for security, the program directory is restricted to \`/usr/bin\` or \`/tmp\`.
+          如果需要手动安装 EasyTier 程序，不要安装 \`easytier\` 或 \`easytier-noweb\`。只安装 \`luci-app-easytier\` 和语言包，然后进入 LuCI -> VPN -> EasyTier -> 上传程序，保存后手动上传官方 EasyTier Release 中的程序文件。注意：出于安全考虑，程序目录被限制为 \`/usr/bin\` 或 \`/tmp\`。
 
           You can also use the online download function on the Upload Program page. This requires network access to GitHub. If GitHub access is slow or unavailable, configure acceleration mirror URLs before downloading.
           也可以在“上传程序”页面使用在线下载功能。该功能需要设备能正常访问 GitHub；如果访问慢或无法访问，请先配置加速镜像地址。
@@ -197,8 +197,8 @@ jobs:
 
           https://github.com/EasyTier/EasyTier/releases
 
-          In LuCI, go to VPN -> EasyTier -> Upload Program, set the program directory, save it, and upload \`easytier-core\`, \`easytier-cli\`, and optionally \`easytier-web-embed\`.
-          在 LuCI 中进入 VPN -> EasyTier -> 上传程序，设置程序目录并保存，然后上传 \`easytier-core\`、\`easytier-cli\`，以及可选的 \`easytier-web-embed\`。
+          In LuCI, go to VPN -> EasyTier -> Upload Program, save it, and upload \`easytier-core\`, \`easytier-cli\`, and optionally \`easytier-web-embed\`. The program directory is restricted to \`/usr/bin\` or \`/tmp\` for security.
+          在 LuCI 中进入 VPN -> EasyTier -> 上传程序，保存后上传 \`easytier-core\`、\`easytier-cli\`，以及可选的 \`easytier-web-embed\`。出于安全考虑，程序目录被限制为 \`/usr/bin\` 或 \`/tmp\`。
 
           ## After installation / 安装后
 
@@ -213,7 +213,7 @@ jobs:
           - Missing TUN support: install or enable \`kmod-tun\`. / 缺少 TUN 支持：安装或启用 \`kmod-tun\`。
           - LuCI menu not visible: refresh the browser, clear LuCI cache, or run \`rm -f /tmp/luci-indexcache /tmp/luci-modulecache/*\` and re-login. / LuCI 菜单不显示：刷新浏览器、清理 LuCI 缓存，或执行 \`rm -f /tmp/luci-indexcache /tmp/luci-modulecache/*\` 后重新登录。
           - Online download fails: check DNS, gateway, and GitHub connectivity; configure acceleration mirror URLs or upload files manually. / 在线下载失败：检查 DNS、网关和 GitHub 连通性；配置加速镜像地址或手动上传程序。
-          - Not enough storage: install \`easytier-noweb\`, or install only LuCI and upload binaries to a larger custom directory. / 存储空间不足：安装 \`easytier-noweb\`，或只安装 LuCI 并把程序上传到容量更大的自定义目录。
+          - Not enough storage: install \`easytier-noweb\`, or install only LuCI and upload binaries to \`/tmp\` (the program directory is restricted to \`/usr/bin\` or \`/tmp\`). / 存储空间不足：安装 \`easytier-noweb\`，或只安装 LuCI 并把程序上传到 \`/tmp\`（程序目录被限制为 \`/usr/bin\` 或 \`/tmp\`）。
           - Service does not start: verify the program path, executable permission, and configuration; then restart with \`/etc/init.d/easytier restart\`. / 服务无法启动：检查程序路径、可执行权限和配置，然后执行 \`/etc/init.d/easytier restart\`。
 
           EOF

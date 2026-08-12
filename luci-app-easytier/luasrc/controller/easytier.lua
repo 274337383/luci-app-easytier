@@ -135,7 +135,7 @@ function act_status()
 	if cached_newtag and cached_newtag ~= "" then
 		e.etnewtag = cached_newtag:gsub("[\r\n]+", "")
 	else
-		e.etnewtag = safe_exec("curl -L -k -s --connect-timeout 3 --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36' https://api.github.com/repos/EasyTier/EasyTier/releases/latest | grep tag_name | sed 's/[^0-9.]*//g'")
+		e.etnewtag = safe_exec("curl -L -s --connect-timeout 3 --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36' https://api.github.com/repos/EasyTier/EasyTier/releases/latest | grep tag_name | sed 's/[^0-9.]*//g'")
 		if e.etnewtag ~= "" then
 			local f = io.open("/tmp/easytiernew.tag", "w")
 			if f then f:write(e.etnewtag); f:close() end
@@ -887,8 +887,8 @@ end
 local function download_file(url, output_path, progress_callback)
 	local fs = require "nixio.fs"
 	local download_tools = {
-		{"/usr/bin/curl", "-L", "-k", "--connect-timeout", "30", "--max-time", "300", "-o", output_path, url},
-		{"/usr/bin/wget", "--no-check-certificate", "--timeout=30", "--tries=3", "-O", output_path, url}
+		{"/usr/bin/curl", "-L", "--connect-timeout", "30", "--max-time", "300", "-o", output_path, url},
+		{"/usr/bin/wget", "--timeout=30", "--tries=3", "-O", output_path, url}
 	}
 
 	for _, argv in ipairs(download_tools) do
